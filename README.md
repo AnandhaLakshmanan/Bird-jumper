@@ -3,6 +3,8 @@ A Flappy Bird clone built using Python and the Pygame library. The player contro
 
 ## Run Locally (tested in windows)
 
+Make sure to install python in your system from here https://www.python.org/downloads/
+
 Clone the project
 
 ```bash
@@ -27,3 +29,4 @@ Start the game
 
 ## Demo
 Gameplay demo:
+https://github.com/user-attachments/assets/7ba8efee-b450-4345-833e-de0c0cfc78f5
