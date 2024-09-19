@@ -8,6 +8,7 @@ pygame.init()
 mixer.init()
 
 clock = time.Clock()
+# constants
 FPS = 60
 SCREEN_WIDTH = 864
 SCREEN_HIEGHT = 936
@@ -20,7 +21,7 @@ display.set_caption("Flappy Bird")
 icon_img = image.load("Resources/icon.png")
 display.set_icon(icon_img)
 
-# game variables
+# game state variables
 ground_scroll = 0
 scroll_speed = 4
 flying = False
@@ -32,6 +33,8 @@ score = 0
 pipe_passed = False
 start_game = False
 game_paused = False
+collided = 0
+fell = 0
 menu_state = "paused_menu"
 
 
@@ -49,7 +52,6 @@ scored = mixer.Sound("Resources/scored.mp3")
 thump = mixer.Sound("Resources/thump.mp3")
 
 
-# load high score
 def load_high_score():
     """
     Reads high score value from text document named "high_score.txt"
@@ -61,7 +63,6 @@ def load_high_score():
         return 0
 
 
-# draw high score on screen
 def draw_high_score(high_score):
     """
     Creates high score text with value and draws it on screen
@@ -72,7 +73,6 @@ def draw_high_score(high_score):
     screen.blit(text, (SCREEN_WIDTH // 2 + 250, 40))
 
 
-# draw score on screen
 def draw_score(score):
     """
     Creates score value and draws it on screen
@@ -91,10 +91,9 @@ def save_high_score(high_score):
         file.write(str(high_score))
 
 
-# restart the game once restart button is pressed
 def reset_game():
     """
-    Resets bird to initial position, clears pipes and score.
+    Resets bird to initial position, clears pipes & score, restart the game once restart button is pressed
     """
     pipe_group.empty()
     flappy.rect.x = 100
@@ -112,7 +111,6 @@ class Title:
         self.rect.topleft = (x, y)
 
     def draw(self, screen):
-        # draw on screen
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
 
@@ -212,7 +210,6 @@ class Pipe(pygame.sprite.Sprite):
             self.kill()
 
 
-# Load high score
 high_score = load_high_score()
 
 # Create group for bird and pipes
@@ -279,7 +276,7 @@ while running:
         # draw ground
         screen.blit(ground_img, (ground_scroll, 768))
 
-        # check if bird passed the pipe, update score and high score if passed
+        # check if bird passed the pipe, update score and high score if needed.
         if len(pipe_group) > 0:
             if (
                 bird_group.sprites()[0].rect.left > pipe_group.sprites()[0].rect.left
@@ -300,6 +297,7 @@ while running:
                     mixer.Sound.play(scored)
                     pipe_passed = False
 
+
             # Update score and high score (if changed) on screen
             draw_score(score)
             draw_high_score(high_score)
@@ -309,13 +307,19 @@ while running:
             sprite.groupcollide(bird_group, pipe_group, False, False)
             or flappy.rect.top < 0
         ):
+            collided += 1
+            play_thump = True
             game_over = True
-            mixer.Sound.play(thump)
+            if collided == 1:
+                mixer.Sound.play(thump)
 
         # check if bird falls to ground
         if flappy.rect.bottom >= 768:
+            fell += 1
             game_over = True
             flying = False
+            if fell == 1:
+                mixer.Sound.play(thump)
 
         # generate new pipes if bird is flying
         if game_over is False and flying is True:
@@ -343,6 +347,8 @@ while running:
         if game_over:
             if restart_btn.draw(screen):
                 game_over = False
+                fell = 0
+                collided = 0
                 score = reset_game()
             if rst_exit_btn.draw(screen):
                 save_high_score(high_score)
