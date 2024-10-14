@@ -8,37 +8,39 @@ pygame.init()
 mixer.init()
 
 clock = time.Clock()
-# constants
-FPS = 60
-SCREEN_WIDTH = 864
-SCREEN_HIEGHT = 936
 random_generator = SystemRandom()
 
-screen = display.set_mode((SCREEN_WIDTH, SCREEN_HIEGHT))
+# Constants
+FPS = 60
+SCREEN_WIDTH = 864
+SCREEN_HEIGHT = 936
+SCREEN_HEIGHT_HALF = SCREEN_HEIGHT // 2
+SCREEN_WIDTH_HALF = SCREEN_WIDTH // 2
+SCROLL_SPEED = 5
+PIPE_GAP = 150
+PIPE_FREQUENCY = 1500  # milliseconds
+
+# Set game window dimensions and caption
+screen = display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 display.set_caption("Flappy Bird")
 
-# icon image
+# Game icon image
 icon_img = image.load("Resources/icon.png")
 display.set_icon(icon_img)
 
-# game state variables
+# Game state variables
 ground_scroll = 0
-scroll_speed = 4
 flying = False
 game_over = False
-pipe_gap = 150
-pipe_frequency = 1500  # milliseconds
-last_pipe = time.get_ticks() - pipe_frequency
+last_pipe = time.get_ticks() - PIPE_FREQUENCY
 score = 0
 pipe_passed = False
 start_game = False
 game_paused = False
 collided = 0
 fell = 0
-menu_state = "paused_menu"
 
-
-# load images
+# Load images
 title_img = image.load("Resources/title.png").convert_alpha()
 background_img = image.load("Resources/background.png").convert_alpha()
 ground_img = image.load("Resources/ground.png").convert_alpha()
@@ -47,14 +49,16 @@ start_img = image.load("Resources/start.png").convert_alpha()
 exit_img = image.load("Resources/exit.png").convert_alpha()
 resume_img = image.load("Resources/resume.png").convert_alpha()
 
-# load sound
+# Load sound
 scored = mixer.Sound("Resources/scored.mp3")
 thump = mixer.Sound("Resources/thump.mp3")
 
 
 def load_high_score():
     """
-    Reads high score value from text document named "high_score.txt"
+    Loads the highest score from a text file named 'high_score.txt'.
+        
+    :return: high score(int) or 0 if the file does not exist.
     """
     try:
         with open("high_score.txt", "r") as file:
@@ -63,29 +67,26 @@ def load_high_score():
         return 0
 
 
-def draw_high_score(high_score):
+def render_score_and_high_score(score, high_score):
     """
-    Creates high score text with value and draws it on screen
-    :param high_score: int
-    """
-    style = font.Font(None, 40)
-    text = style.render("High Score: " + str(high_score), True, (255, 255, 255))
-    screen.blit(text, (SCREEN_WIDTH // 2 + 250, 40))
+    Renders the current score and the highest score on the game screen.
 
-
-def draw_score(score):
+    :param score: The player's current score (int) during gameplay.
+    :param high_score: The highest score achieved by the player (int) across all sessions.
     """
-    Creates score value and draws it on screen
-    :param score: int
-    """
-    style = font.SysFont("Bauhaus 93", 60)
-    img = style.render(str(score), True, (255, 255, 255))
-    screen.blit(img, (SCREEN_WIDTH // 2, 20))
+    high_score_style = font.Font(None, 40)
+    score_style = font.SysFont("Bauhaus 93", 60)
+    high_score_txt = high_score_style.render(f"High Score: {high_score}", True, (255, 255, 255))
+    score_txt = score_style.render(f"{score}", True, (255, 255, 255))
+    screen.blit(high_score_txt, (SCREEN_WIDTH_HALF + 250, 40))
+    screen.blit(score_txt, (SCREEN_WIDTH_HALF, 20))
 
 
 def save_high_score(high_score):
     """
-    Write high score value to text document named "high_score.txt"
+    Saves the high score to a text file ('high_score.txt').
+
+    :param high_score: The highest score (int) that should be saved.
     """
     with open("high_score.txt", "w") as file:
         file.write(str(high_score))
@@ -93,17 +94,38 @@ def save_high_score(high_score):
 
 def reset_game():
     """
-    Resets bird to initial position, clears pipes & score, restart the game once restart button is pressed
+    Resets the game state to its initial conditions for a fresh start. This function clears the pipes from the screen, repositions the bird 
+    to its starting point, and resets the score. 
+    
+    :return: score(int).
     """
     pipe_group.empty()
-    flappy.rect.x = 100
-    flappy.rect.y = int(SCREEN_HIEGHT / 2)
+    bird.rect.x = 100
+    bird.rect.y = SCREEN_HEIGHT_HALF
     score = 0
     return score
 
 
-class Title:
+def draw_background_and_ground():
+    """
+    Draws the game background and the ground on the screen.
+    """
+    # Draw background
+    screen.blit(background_img, (0, 0))
+    # Draw ground
+    screen.blit(ground_img, (ground_scroll, 768))
+
+
+class Element():
     def __init__(self, x, y, image, scale):
+        """
+        Initializes an Element object with position, image, and scaling.
+        
+        :param x: X-coordinate for the top-left corner of the element.
+        :param y: Y-coordinate for the top-left corner of the element.
+        :param image: The image surface to display for the element.
+        :param scale: Scaling factor for resizing the image.
+        """
         width = image.get_width()
         height = image.get_height()
         self.image = transform.scale(image, (int(width * scale), int(height * scale)))
@@ -111,38 +133,55 @@ class Title:
         self.rect.topleft = (x, y)
 
     def draw(self, screen):
+        """
+        Draws the element onto the given screen surface.
+
+        :param screen: The surface where the element will be drawn.
+        """
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
 
-class Button:
+class Button(Element):
     def __init__(self, x, y, image, scale):
-        width = image.get_width()
-        height = image.get_height()
-        self.image = transform.scale(image, (int(width * scale), int(height * scale)))
-        self.rect = self.image.get_rect()
-        self.rect.topleft = (x, y)
+        """
+        Initializes a Button object, inheriting from Element, with additional click handling.
+        
+        :param x: X-coordinate for the button's top-left corner.
+        :param y: Y-coordinate for the button's top-left corner.
+        :param image: The image surface for the button.
+        :param scale: Scaling factor for resizing the button image.
+        """
+        super().__init__(x, y, image, scale)
         self.clicked = False
 
-    def draw(self, screen):
-        action = False
-        # get mouse position
-        pos = mouse.get_pos()
+    def check_if_button_is_pressed(self, screen):
+        """
+        Checks if the button is pressed, updates its state, and returns the action.
 
-        # check mouseover button and if user is clicking it
+        :param screen: The surface where the button will be checked and drawn.
+        :return: True if the button is pressed, False otherwise.
+        """
+        action = False
+        # Get mouse position on screen
+        pos = mouse.get_pos()
+        # Check if user has mouse over the button & if it is being clicked
         if self.rect.collidepoint(pos):
-            if mouse.get_pressed()[0] == 1 and self.clicked is False:
+            if mouse.get_pressed()[0] == 1 and not self.clicked:
                 self.clicked = True
                 action = True
             if mouse.get_pressed()[0] == 0:
                 self.clicked = False
-
-        # draw button on screen
-        screen.blit(self.image, (self.rect.x, self.rect.y))
         return action
 
 
 class Bird(pygame.sprite.Sprite):
     def __init__(self, x, y):
+        """
+        Initializes a Bird object with images for animation and sets the initial position.
+        
+        :param x: X-coordinate for the bird's center.
+        :param y: Y-coordinate for the bird's center.
+        """
         sprite.Sprite.__init__(self)
         self.images = []
         self.index = 0
@@ -157,25 +196,28 @@ class Bird(pygame.sprite.Sprite):
         self.clicked = False
 
     def update(self):
+        """
+        Updates the bird's movement, handles jumping, moving & rotation animations.
+        """
         if flying:
-            # bird downward movement (gravity)
+            # Bird downward movement (gravity)
             self.vel += 0.5
             self.vel = min(self.vel, 8)
             if self.rect.bottom < 768:
                 self.rect.y += int(self.vel)
 
-        if game_over is False:
-            # jump up
+        if not game_over:
+            # Jump up if user uses mouse left click
             left_click = mouse.get_pressed()[0]
 
-            if left_click == 1 and self.clicked is False:
+            if left_click == 1 and not self.clicked:
                 self.clicked = True
                 self.vel = -10
 
             if left_click == 0:
                 self.clicked = False
 
-            # bird moving animation
+            # Bird moving animation
             self.counter += 1
             flap_cooldown = 5
             if self.counter > flap_cooldown:
@@ -185,27 +227,38 @@ class Bird(pygame.sprite.Sprite):
                     self.index = 0
             self.image = self.images[self.index]
 
-            # rotate the bird
+            # Rotate the bird
             self.image = transform.rotate(self.images[self.index], self.vel * -2)
 
         else:
+            # Make the bird face down when it falls to ground / collides with pipe
             self.image = transform.rotate(self.images[self.index], -90)
 
 
 class Pipe(pygame.sprite.Sprite):
     def __init__(self, x, y, position):
+        """
+        Initializes a Pipe object with its position and whether it's a top or bottom pipe.
+        
+        :param x: X-coordinate for the pipe's center.
+        :param y: Y-coordinate for the pipe's center.
+        :param position: 1 for top pipe, -1 for bottom pipe.
+        """
         sprite.Sprite.__init__(self)
         self.image = pygame.image.load("Resources/pipe.png")
         self.rect = self.image.get_rect()
-        # position : 1 means top & -1 means bottom
+        pipe_gap_half = PIPE_GAP // 2
         if position == 1:
             self.image = transform.flip(self.image, False, True)
-            self.rect.bottomleft = (x, y - int(pipe_gap / 2))
+            self.rect.bottomleft = (x, y - pipe_gap_half)
         if position == -1:
-            self.rect.topleft = (x, y + int(pipe_gap / 2))
+            self.rect.topleft = (x, y + pipe_gap_half)
 
     def update(self):
-        self.rect.x -= scroll_speed
+        """
+        Updates the pipe's position, moving it left across the screen, and removes it if off-screen.
+        """
+        self.rect.x -= SCROLL_SPEED
         if self.rect.right < 0:
             self.kill()
 
@@ -215,74 +268,69 @@ high_score = load_high_score()
 # Create group for bird and pipes
 bird_group = sprite.Group()
 pipe_group = sprite.Group()
-flappy = Bird(100, int(SCREEN_HIEGHT / 2))
-bird_group.add(flappy)
+bird = Bird(100, SCREEN_HEIGHT_HALF)
+bird_group.add(bird)
 
-# create buttons
-title = Title(SCREEN_WIDTH // 2 - 270, 30, title_img, 2)
-restart_btn = Button(SCREEN_WIDTH // 2 - 80, SCREEN_HIEGHT // 2 - 100, restart_img, 1.5)
-rst_exit_btn = Button(SCREEN_WIDTH // 2 - 50, SCREEN_HIEGHT // 2, exit_img, 0.5)
-start_btn = Button(SCREEN_WIDTH // 2 - 130, SCREEN_HIEGHT // 2 - 130, start_img, 0.8)
-exit_btn = Button(SCREEN_WIDTH // 2 - 110, SCREEN_HIEGHT // 2 + 50, exit_img, 0.8)
-resume_btn = Button(SCREEN_WIDTH // 2 - 105, SCREEN_HIEGHT // 2 - 150, resume_img, 0.8)
-pause_menu_exit_btn = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HIEGHT // 2 + 50, exit_img, 0.8)
+# Create UI buttons
+title = Element(SCREEN_WIDTH_HALF - 270, 30, title_img, 2)
+restart_btn = Button(SCREEN_WIDTH_HALF - 80, SCREEN_HEIGHT_HALF - 100, restart_img, 1.5)
+restart_exit_btn = Button(SCREEN_WIDTH_HALF - 50, SCREEN_HEIGHT_HALF, exit_img, 0.5)
+start_btn = Button(SCREEN_WIDTH_HALF - 130, SCREEN_HEIGHT_HALF - 130, start_img, 0.8)
+exit_btn = Button(SCREEN_WIDTH_HALF - 110, SCREEN_HEIGHT_HALF + 50, exit_img, 0.8)
+resume_btn = Button(SCREEN_WIDTH_HALF - 105, SCREEN_HEIGHT_HALF - 150, resume_img, 0.8)
+pause_menu_exit_btn = Button(SCREEN_WIDTH_HALF - 100, SCREEN_HEIGHT_HALF + 50, exit_img, 0.8)
 
 
 running = True
 while running:
     clock.tick(FPS)
 
-    if start_game is False:
-        # draw background
-        screen.blit(background_img, (0, 0))
-
-        # draw ground
-        screen.blit(ground_img, (ground_scroll, 768))
+    # Display start menu
+    if not start_game:
+        draw_background_and_ground()
         title.draw(screen)
+        start_btn.draw(screen)
+        exit_btn.draw(screen)
 
-        # add buttons
-        if start_btn.draw(screen):
+        if start_btn.check_if_button_is_pressed(screen):
             start_game = True
-        if exit_btn.draw(screen):
+        if exit_btn.check_if_button_is_pressed(screen):
             save_high_score(high_score)
             running = False
 
-    # check if game is paused
-    elif game_paused is True:
-        # draw background
-        screen.blit(background_img, (0, 0))
-
-        # draw ground
-        screen.blit(ground_img, (ground_scroll, 768))
-        if menu_state == "paused_menu":
-            # display pause menu
-            if resume_btn.draw(screen):
-                game_paused = False
-            if pause_menu_exit_btn.draw(screen):
-                save_high_score(high_score)
-                running = False
+    # Display pause menu
+    elif game_paused and not game_over and flying:
+        draw_background_and_ground()
+        resume_btn.draw(screen)
+        pause_menu_exit_btn.draw(screen)
+        
+        if resume_btn.check_if_button_is_pressed(screen):
+            game_paused = False
+        if pause_menu_exit_btn.check_if_button_is_pressed(screen):
+            save_high_score(high_score)
+            running = False
 
     else:
-        # draw background
+        # Draw background
         screen.blit(background_img, (0, 0))
 
-        # draw bird
+        # Draw bird
         bird_group.draw(screen)
         bird_group.update()
 
-        # draw pipes
+        # Draw pipes
         pipe_group.draw(screen)
 
-        # draw ground
+        # Draw ground
         screen.blit(ground_img, (ground_scroll, 768))
 
-        # check if bird passed the pipe, update score and high score if needed.
+        # Check if bird passed the pipe, update score and high score (if needed).
         if len(pipe_group) > 0:
             if (
                 bird_group.sprites()[0].rect.left > pipe_group.sprites()[0].rect.left
                 and bird_group.sprites()[0].rect.right
                 < pipe_group.sprites()[0].rect.right
-                and pipe_passed is False
+                and not pipe_passed
             ):
                 pipe_passed = True
 
@@ -297,15 +345,12 @@ while running:
                     mixer.Sound.play(scored)
                     pipe_passed = False
 
+            render_score_and_high_score(score, high_score)
 
-            # Update score and high score (if changed) on screen
-            draw_score(score)
-            draw_high_score(high_score)
-
-        # check for collision between bird and pipe
+        # Check for collision between bird and pipe
         if (
             sprite.groupcollide(bird_group, pipe_group, False, False)
-            or flappy.rect.top < 0
+            or bird.rect.top < 0
         ):
             collided += 1
             play_thump = True
@@ -313,49 +358,55 @@ while running:
             if collided == 1:
                 mixer.Sound.play(thump)
 
-        # check if bird falls to ground
-        if flappy.rect.bottom >= 768:
+        # Check if bird fell to ground
+        if bird.rect.bottom >= 768:
             fell += 1
             game_over = True
             flying = False
             if fell == 1:
                 mixer.Sound.play(thump)
 
-        # generate new pipes if bird is flying
-        if game_over is False and flying is True:
-
+        # Generate new pipes if bird is flying
+        if not game_over and flying:
             time_now = time.get_ticks()
-            if time_now - last_pipe > pipe_frequency:
+            if time_now - last_pipe > PIPE_FREQUENCY:
                 pipe_height = random_generator.randint(-100, 100)
-                top_pipe = Pipe(SCREEN_WIDTH, SCREEN_HIEGHT // 2 + pipe_height, 1)
-                bot_pipe = Pipe(SCREEN_WIDTH, SCREEN_HIEGHT // 2 + pipe_height, -1)
+                top_pipe = Pipe(SCREEN_WIDTH, SCREEN_HEIGHT_HALF + pipe_height, 1)
+                bot_pipe = Pipe(SCREEN_WIDTH, SCREEN_HEIGHT_HALF + pipe_height, -1)
 
                 pipe_group.add(top_pipe)
                 pipe_group.add(bot_pipe)
                 last_pipe = time_now
 
-            # scroll the ground as bird moves forward
+            # Scroll the ground as bird moves forward
             screen.blit(ground_img, (ground_scroll, 768))
-            ground_scroll -= scroll_speed
+            ground_scroll -= SCROLL_SPEED
             if abs(ground_scroll) > 35:
                 ground_scroll = 0
 
-            # update pipes to screen
+            # Update pipes to screen
             pipe_group.update()
 
         # Display game over menu 
         if game_over:
-            if restart_btn.draw(screen):
+            restart_btn.draw(screen)
+            restart_exit_btn.draw(screen)
+            if restart_btn.check_if_button_is_pressed(screen):
                 game_over = False
                 fell = 0
                 collided = 0
                 score = reset_game()
-            if rst_exit_btn.draw(screen):
+            if restart_exit_btn.check_if_button_is_pressed(screen):
                 save_high_score(high_score)
                 running = False
 
+    # Check for events
     for event in events.get():
-        if event.type == pygame.QUIT:
+        if (
+            event.type == pygame.QUIT or
+            event.type == pygame.KEYDOWN
+            and event.key == pygame.K_ESCAPE
+        ):
             running = False
 
         if (
