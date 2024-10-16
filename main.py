@@ -1,6 +1,7 @@
 import pygame
 from pygame import display, font, image, mixer, mouse, sprite, time, transform, event as events
 from random import SystemRandom
+import logging
 
 
 pygame.init()
@@ -61,8 +62,11 @@ def load_high_score():
     """
     try:
         with open("high_score.txt", "r") as file:
-            return int(file.read())
+            current_high_score = int(file.read())
+            logger.info(f"High score loaded from file: {current_high_score}")
+            return current_high_score
     except FileNotFoundError:
+        logger.warning("High score file not found. Defaulting to 0.")
         return 0
 
 
@@ -89,6 +93,7 @@ def save_high_score(current_high_score):
     :param current_high_score: The highest score (int) that should be saved.
     """
     with open("high_score.txt", "w") as file:
+        logger.info(f"Saving High score: {current_high_score} to file")
         file.write(str(current_high_score))
 
 
@@ -113,6 +118,17 @@ def draw_background_and_ground():
     screen.blit(source=background_img, dest=(0, 0))
     # Draw ground
     screen.blit(source=ground_img, dest=(ground_scroll, 768))
+
+
+def get_logger():
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)
+    file_handler = logging.FileHandler(filename="game.log", mode="w")
+    formatter = logging.Formatter("{asctime}: {name}: {levelname}: {message}", style="{", datefmt="%Y-%m-%d %H:%M")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    log.addHandler(file_handler)
+    return log
 
 
 class Element:
@@ -254,8 +270,6 @@ class Pipe(pygame.sprite.Sprite):
             self.kill()
 
 
-high_score = load_high_score()
-
 # Create group for bird and pipes
 bird_group = sprite.Group()
 pipe_group = sprite.Group()
@@ -272,10 +286,11 @@ exit_btn = Button(HALF_SCREEN_WIDTH - 110, HALF_SCREEN_HEIGHT + 50, exit_img, 0.
 resume_btn = Button(HALF_SCREEN_WIDTH - 105, HALF_SCREEN_HEIGHT - 150, resume_img, 0.8)
 pause_menu_exit_btn = Button(HALF_SCREEN_WIDTH - 100, HALF_SCREEN_HEIGHT + 50, exit_img, 0.8)
 
-
+logger = get_logger()
+logger.info("Game: Flappy Bird initialized.")
+high_score = load_high_score()
 while running:
     clock.tick(FPS)
-
     # Display start menu
     if not start_game:
         draw_background_and_ground()
@@ -283,9 +298,11 @@ while running:
         start_btn.draw()
         exit_btn.draw()
         if start_btn.check_if_button_is_pressed():
+            logger.info("Start button pressed. Game started...")
             start_game = True
             flying = True
         if exit_btn.check_if_button_is_pressed():
+            logger.info("Exit button pressed. Game started.")
             save_high_score(high_score)
             running = False
 
@@ -295,8 +312,10 @@ while running:
         resume_btn.draw()
         pause_menu_exit_btn.draw()
         if resume_btn.check_if_button_is_pressed():
+            logger.info("Resume button pressed. Game is resumed...")
             game_paused = False
         if pause_menu_exit_btn.check_if_button_is_pressed():
+            logger.info("Exit button pressed. Game is closing...")
             save_high_score(high_score)
             running = False
 
@@ -350,8 +369,10 @@ while running:
                     > pipe_group.sprites()[0].rect.right
                 ):
                     score += 1
+                    logger.info(f"Score increased: {score}")
                     if score > high_score:
                         high_score = score
+                        logger.info(f"New high score: {high_score}")
                     scored.play()
                     passing_through_pipe = False
 
@@ -365,6 +386,7 @@ while running:
             collided += 1
             game_over = True
             if collided == 1:
+                logger.warning("Collision detected: Bird hit a pipe or flew out of bounds.")
                 thump.play()
 
         # Check if bird fell to ground
@@ -373,6 +395,7 @@ while running:
             game_over = True
             flying = False
             if fell == 1:
+                logger.warning("Bird hit the ground.")
                 thump.play()
 
         # Display game over menu
@@ -380,23 +403,27 @@ while running:
             restart_btn.draw()
             restart_menu_exit_btn.draw()
             if restart_btn.check_if_button_is_pressed():
+                logger.info("Restart button pressed. Game is reset...")
                 game_over = False
                 fell = 0
                 collided = 0
                 score = reset_game()
             if restart_menu_exit_btn.check_if_button_is_pressed():
+                logger.info("Exit button pressed. Game is closing...")
                 save_high_score(high_score)
                 running = False
 
     # Check for events
     for event in events.get():
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            logger.info("Game window closed.")
             running = False
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not flying and not game_over:
             flying = True
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            logger.info("Game paused.")
             game_paused = True
 
     pygame.display.update()
