@@ -12,8 +12,8 @@ random_generator = SystemRandom()
 FPS = 60
 SCREEN_WIDTH = 864
 SCREEN_HEIGHT = 936
-SCREEN_HEIGHT_HALF = SCREEN_HEIGHT // 2
-SCREEN_WIDTH_HALF = SCREEN_WIDTH // 2
+HALF_SCREEN_HEIGHT = SCREEN_HEIGHT // 2
+HALF_SCREEN_WIDTH = SCREEN_WIDTH // 2
 SCROLL_SPEED = 5
 PIPE_GAP = 150
 PIPE_FREQUENCY = 1500  # milliseconds
@@ -22,7 +22,7 @@ PIPE_FREQUENCY = 1500  # milliseconds
 screen = display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
 display.set_caption(title="Flappy Bird")
 
-# Game icon image
+# Load and set game window icon image
 icon_img = image.load("Resources/icon.png")
 display.set_icon(icon_img)
 
@@ -32,11 +32,12 @@ flying = False
 game_over = False
 last_pipe = time.get_ticks() - PIPE_FREQUENCY
 score = 0
-pipe_passed = False
+passing_through_pipe = False
 start_game = False
 game_paused = False
 collided = 0
 fell = 0
+running = True
 
 # Load images
 title_img = image.load("Resources/title.png").convert_alpha()
@@ -67,7 +68,7 @@ def load_high_score():
 
 def render_score_and_high_score(current_score, current_high_score):
     """
-    Renders the current score and the highest score on the game screen.
+    Renders the current score and the highest score onto the game screen.
 
     :param current_score: The player's current score (int) during gameplay.
     :param current_high_score: The highest score achieved by the player (int) across all sessions.
@@ -76,8 +77,9 @@ def render_score_and_high_score(current_score, current_high_score):
     score_style = font.SysFont(name="Bauhaus 93", size=60)
     high_score_txt = high_score_style.render(f"High Score: {current_high_score}", True, (255, 255, 255))
     score_txt = score_style.render(f"{current_score}", True, (255, 255, 255))
-    screen.blit(high_score_txt, (SCREEN_WIDTH_HALF + 250, 40))
-    screen.blit(score_txt, (SCREEN_WIDTH_HALF, 20))
+    high_score_txt_x = SCREEN_WIDTH - high_score_txt.get_width() - 20
+    screen.blit(high_score_txt, (high_score_txt_x, 40))
+    screen.blit(score_txt, (HALF_SCREEN_WIDTH, 20))
 
 
 def save_high_score(current_high_score):
@@ -93,13 +95,13 @@ def save_high_score(current_high_score):
 def reset_game():
     """
     Resets the game state to its initial conditions for a fresh start. This function clears the pipes from the screen,
-    repositions the bird to its starting point, and resets the score.
+    repositions the bird to its starting point, and resets the score to 0.
     
-    :return: score(int).
+    :return: 0 (score(int)).
     """
     pipe_group.empty()
     bird.rect.x = 100
-    bird.rect.y = SCREEN_HEIGHT_HALF
+    bird.rect.y = HALF_SCREEN_HEIGHT
     return 0
 
 
@@ -133,7 +135,7 @@ class Element:
         """
         Draws the element onto the screen surface.
         """
-        screen.blit(self.image, (self.rect.x, self.rect.y))
+        screen.blit(source=self.image, dest=(self.rect.x, self.rect.y))
 
 
 class Button(Element):
@@ -154,7 +156,6 @@ class Button(Element):
         :return: True if the button is pressed, False otherwise.
         """
         action = False
-        # Get mouse position on screen
         pos = mouse.get_pos()
         # Check if user has mouse over the button & if it is being clicked
         if self.rect.collidepoint(pos):
@@ -167,12 +168,12 @@ class Button(Element):
 
 
 class Bird(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x_coord, y_coord):
         """
         Initializes a Bird object with images for animation and sets the initial position.
         
-        :param x: X-coordinate for the bird's center.
-        :param y: Y-coordinate for the bird's center.
+        :param x_coord: X-coordinate for the bird's center.
+        :param y_coord: Y-coordinate for the bird's center.
         """
         pygame.sprite.Sprite.__init__(self)
         self.images = []
@@ -183,7 +184,7 @@ class Bird(pygame.sprite.Sprite):
             self.images.append(img)
         self.image = self.images[self.index]
         self.rect = self.image.get_rect()
-        self.rect.center = (x, y)
+        self.rect.center = (x_coord, y_coord)
         self.vel = 0
         self.clicked = False
 
@@ -199,7 +200,7 @@ class Bird(pygame.sprite.Sprite):
                 self.rect.y += int(self.vel)
 
         if not game_over:
-            # Jump up if user uses mouse left click
+            # Jump up only if user uses left mouse click
             left_click = mouse.get_pressed()[0]
             if left_click == 1 and not self.clicked:
                 self.clicked = True
@@ -258,20 +259,20 @@ high_score = load_high_score()
 # Create group for bird and pipes
 bird_group = sprite.Group()
 pipe_group = sprite.Group()
-bird = Bird(100, SCREEN_HEIGHT_HALF)
+
+bird = Bird(100, HALF_SCREEN_HEIGHT)
 bird_group.add(bird)
 
 # Create UI buttons
-title = Element(SCREEN_WIDTH_HALF - 270, 30, title_img, 2)
-restart_btn = Button(SCREEN_WIDTH_HALF - 80, SCREEN_HEIGHT_HALF - 100, restart_img, 1.5)
-restart_menu_exit_btn = Button(SCREEN_WIDTH_HALF - 50, SCREEN_HEIGHT_HALF, exit_img, 0.5)
-start_btn = Button(SCREEN_WIDTH_HALF - 130, SCREEN_HEIGHT_HALF - 130, start_img, 0.8)
-exit_btn = Button(SCREEN_WIDTH_HALF - 110, SCREEN_HEIGHT_HALF + 50, exit_img, 0.8)
-resume_btn = Button(SCREEN_WIDTH_HALF - 105, SCREEN_HEIGHT_HALF - 150, resume_img, 0.8)
-pause_menu_exit_btn = Button(SCREEN_WIDTH_HALF - 100, SCREEN_HEIGHT_HALF + 50, exit_img, 0.8)
+title = Element(HALF_SCREEN_WIDTH - 270, 30, title_img, 2)
+restart_btn = Button(HALF_SCREEN_WIDTH - 80, HALF_SCREEN_HEIGHT - 100, restart_img, 1.5)
+restart_menu_exit_btn = Button(HALF_SCREEN_WIDTH - 50, HALF_SCREEN_HEIGHT, exit_img, 0.5)
+start_btn = Button(HALF_SCREEN_WIDTH - 130, HALF_SCREEN_HEIGHT - 130, start_img, 0.8)
+exit_btn = Button(HALF_SCREEN_WIDTH - 110, HALF_SCREEN_HEIGHT + 50, exit_img, 0.8)
+resume_btn = Button(HALF_SCREEN_WIDTH - 105, HALF_SCREEN_HEIGHT - 150, resume_img, 0.8)
+pause_menu_exit_btn = Button(HALF_SCREEN_WIDTH - 100, HALF_SCREEN_HEIGHT + 50, exit_img, 0.8)
 
 
-running = True
 while running:
     clock.tick(FPS)
 
@@ -281,7 +282,6 @@ while running:
         title.draw()
         start_btn.draw()
         exit_btn.draw()
-
         if start_btn.check_if_button_is_pressed():
             start_game = True
             flying = True
@@ -294,7 +294,6 @@ while running:
         draw_background_and_ground()
         resume_btn.draw()
         pause_menu_exit_btn.draw()
-        
         if resume_btn.check_if_button_is_pressed():
             game_paused = False
         if pause_menu_exit_btn.check_if_button_is_pressed():
@@ -315,14 +314,13 @@ while running:
         # Draw ground
         screen.blit(ground_img, (ground_scroll, 768))
 
-        # Generate new pipes if bird is flying
+        # Generate new pipes as bird moves forward.
         if not game_over and flying:
             time_now = time.get_ticks()
             if time_now - last_pipe > PIPE_FREQUENCY:
                 pipe_height = random_generator.randint(-100, 100)
-                top_pipe = Pipe(SCREEN_WIDTH, SCREEN_HEIGHT_HALF + pipe_height, 1)
-                bot_pipe = Pipe(SCREEN_WIDTH, SCREEN_HEIGHT_HALF + pipe_height, -1)
-
+                top_pipe = Pipe(SCREEN_WIDTH, HALF_SCREEN_HEIGHT + pipe_height, 1)
+                bot_pipe = Pipe(SCREEN_WIDTH, HALF_SCREEN_HEIGHT + pipe_height, -1)
                 pipe_group.add(top_pipe)
                 pipe_group.add(bot_pipe)
                 last_pipe = time_now
@@ -342,11 +340,11 @@ while running:
                 bird_group.sprites()[0].rect.left > pipe_group.sprites()[0].rect.left
                 and bird_group.sprites()[0].rect.right
                 < pipe_group.sprites()[0].rect.right
-                and not pipe_passed
+                and not passing_through_pipe
             ):
-                pipe_passed = True
+                passing_through_pipe = True
 
-            if pipe_passed:
+            if passing_through_pipe:
                 if (
                     bird_group.sprites()[0].rect.left
                     > pipe_group.sprites()[0].rect.right
@@ -355,11 +353,11 @@ while running:
                     if score > high_score:
                         high_score = score
                     scored.play()
-                    pipe_passed = False
+                    passing_through_pipe = False
 
             render_score_and_high_score(score, high_score)
 
-        # Check for collision between bird and pipe
+        # Game over once bird collides with a pipe or if bird goes above the scrren
         if (
             sprite.groupcollide(groupa=bird_group, groupb=pipe_group, dokilla=False, dokillb=False)
             or bird.rect.top < 0
