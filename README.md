@@ -24,7 +24,7 @@ Start the game
 
 ## Controls
 - Use **Left Mouse Click** to move the bird.
-- Press **Space bar** to pause the game. 
+- Press **Space bar** to pause the game.
 - Press **Exit Button** to close the game.
 
 ## Demo
