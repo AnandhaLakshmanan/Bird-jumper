@@ -20,6 +20,12 @@ HALF_SCREEN_WIDTH = SCREEN_WIDTH // 2
 SCROLL_SPEED = 5
 PIPE_GAP = 150
 PIPE_FREQUENCY = 1500  # milliseconds
+BIRD_INITIAL_X = 100
+GROUND_Y_POS = 768
+MAX_FALL_SPEED = 8
+ROTATION_FACTOR = -2
+CRASH_ROTATION_ANGLE = -90
+GROUND_SCROLL_LIMIT = 35
 
 # Set game window dimensions and caption
 screen = display.set_mode(size=(SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -38,9 +44,9 @@ score = 0
 passing_through_pipe = False
 start_game = False
 game_paused = False
-collided = 0
-fell = 0
 running = True
+hit_pipe_sound = False
+hit_ground_sound = False
 
 # Load images
 title_img = image.load("Resources/title.png").convert_alpha()
@@ -103,14 +109,13 @@ def save_high_score(current_high_score):
 
 def reset_game():
     """
-    Resets the game state to its initial conditions for a fresh start.
-    This function clears the pipes from the screen, repositions the bird to its starting point,
-    and resets the score to 0.
+    Resets the game state to its initial conditions for a fresh start. This function clears the pipes from the screen,
+    repositions the bird to its starting point, and resets the score to 0.
 
     :return: 0 (score(int)).
     """
     pipe_group.empty()
-    bird.rect.x = 100
+    bird.rect.x = BIRD_INITIAL_X
     bird.rect.y = HALF_SCREEN_HEIGHT
     return 0
 
@@ -122,7 +127,47 @@ def draw_background_and_ground():
     # Draw background
     screen.blit(source=background_img, dest=(0, 0))
     # Draw ground
-    screen.blit(source=ground_img, dest=(ground_scroll, 768))
+    screen.blit(source=ground_img, dest=(ground_scroll, GROUND_Y_POS))
+
+
+def check_events():
+    """
+    Checks for user events
+    """
+    global running, flying, game_paused
+    for event in events.get():
+        if event.type == pygame.QUIT or (
+            event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+        ):
+            logger.info("Game window closed.")
+            running = False
+
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and not flying
+            and not game_over
+        ):
+            flying = True
+
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            logger.info("Game paused.")
+            game_paused = True
+
+
+def exit_game():
+    """
+    Exits the game once exit button is clicked after saving the high score
+    """
+    global running, high_score
+    if (
+        exit_btn.check_if_button_is_pressed()
+        or pause_menu_exit_btn.check_if_button_is_pressed()
+        or restart_menu_exit_btn.check_if_button_is_pressed()
+    ):
+        logger.info("Exit button pressed. Game started.")
+        save_high_score(high_score)
+        running = False
 
 
 def get_logger():
@@ -221,8 +266,8 @@ class Bird(pygame.sprite.Sprite):
         if flying:
             # Bird downward movement (gravity)
             self.vel += 0.5
-            self.vel = min(self.vel, 8)
-            if self.rect.bottom < 768:
+            self.vel = min(self.vel, MAX_FALL_SPEED)
+            if self.rect.bottom < GROUND_Y_POS:
                 self.rect.y += int(self.vel)
 
         if not game_over:
@@ -246,32 +291,34 @@ class Bird(pygame.sprite.Sprite):
 
             # Rotate the bird
             self.image = transform.rotate(
-                surface=self.images[self.index], angle=self.vel * -2
+                surface=self.images[self.index], angle=self.vel * ROTATION_FACTOR
             )
 
         else:
             # Make the bird face down when it falls to ground / collides with pipe
-            self.image = transform.rotate(surface=self.images[self.index], angle=-90)
+            self.image = transform.rotate(
+                surface=self.images[self.index], angle=CRASH_ROTATION_ANGLE
+            )
 
 
 class Pipe(pygame.sprite.Sprite):
-    def __init__(self, x_coord, y_coord, position):
+    def __init__(self, x, y, pipe_position):
         """
         Initializes a Pipe object with its position and whether it's a top or bottom pipe.
 
-        :param x_coord: X-coordinate for the pipe's center.
-        :param y_coord: Y-coordinate for the pipe's center.
-        :param position: 1 for top pipe, -1 for bottom pipe.
+        :param x: X-coordinate for the pipe's center.
+        :param y: Y-coordinate for the pipe's center.
+        :param pipe_position: pipe position.
         """
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load("Resources/pipe.png")
         self.rect = self.image.get_rect()
         pipe_gap_half = PIPE_GAP // 2
-        if position == 1:
+        if pipe_position == "top":
             self.image = transform.flip(surface=self.image, flip_x=False, flip_y=True)
-            self.rect.bottomleft = (x_coord, y_coord - pipe_gap_half)
-        if position == -1:
-            self.rect.topleft = (x_coord, y_coord + pipe_gap_half)
+            self.rect.bottomleft = (x, y - pipe_gap_half)
+        if pipe_position == "bottom":
+            self.rect.topleft = (x, y + pipe_gap_half)
 
     def update(self):
         """
@@ -286,7 +333,7 @@ class Pipe(pygame.sprite.Sprite):
 bird_group = sprite.Group()
 pipe_group = sprite.Group()
 
-bird = Bird(100, HALF_SCREEN_HEIGHT)
+bird = Bird(BIRD_INITIAL_X, HALF_SCREEN_HEIGHT)
 bird_group.add(bird)
 
 # Create UI buttons
@@ -313,27 +360,23 @@ while running:
         title.draw()
         start_btn.draw()
         exit_btn.draw()
+        pygame.display.update()
         if start_btn.check_if_button_is_pressed():
             logger.info("Start button pressed. Game started...")
             start_game = True
             flying = True
-        if exit_btn.check_if_button_is_pressed():
-            logger.info("Exit button pressed. Game is closing...")
-            save_high_score(high_score)
-            running = False
+        exit_game()
 
     # Display pause menu
     elif game_paused and not game_over and flying:
         draw_background_and_ground()
         resume_btn.draw()
         pause_menu_exit_btn.draw()
+        pygame.display.update()
         if resume_btn.check_if_button_is_pressed():
             logger.info("Resume button pressed. Game is resumed...")
             game_paused = False
-        if pause_menu_exit_btn.check_if_button_is_pressed():
-            logger.info("Exit button pressed. Game is closing...")
-            save_high_score(high_score)
-            running = False
+        exit_game()
 
     else:
         # Draw background
@@ -347,23 +390,23 @@ while running:
         pipe_group.draw(surface=screen)
 
         # Draw ground
-        screen.blit(ground_img, (ground_scroll, 768))
+        screen.blit(ground_img, (ground_scroll, GROUND_Y_POS))
 
         # Generate new pipes as bird moves forward.
         if not game_over and flying:
             time_now = time.get_ticks()
             if time_now - last_pipe > PIPE_FREQUENCY:
                 pipe_height = random_generator.randint(-100, 100)
-                top_pipe = Pipe(SCREEN_WIDTH, HALF_SCREEN_HEIGHT + pipe_height, 1)
-                bot_pipe = Pipe(SCREEN_WIDTH, HALF_SCREEN_HEIGHT + pipe_height, -1)
-                pipe_group.add(top_pipe)
-                pipe_group.add(bot_pipe)
+                for position in ["top", "bottom"]:
+                    pipe_group.add(
+                        Pipe(SCREEN_WIDTH, HALF_SCREEN_HEIGHT + pipe_height, position)
+                    )
                 last_pipe = time_now
 
             # Scroll the ground as bird moves forward
-            screen.blit(ground_img, (ground_scroll, 768))
+            screen.blit(ground_img, (ground_scroll, GROUND_Y_POS))
             ground_scroll -= SCROLL_SPEED
-            if abs(ground_scroll) > 35:
+            if abs(ground_scroll) > GROUND_SCROLL_LIMIT:
                 ground_scroll = 0
 
             # Update pipes to screen
@@ -391,66 +434,45 @@ while running:
                         logger.info(f"New high score: {high_score}")
                     scored.play()
                     passing_through_pipe = False
-
             render_score_and_high_score(score, high_score)
 
-        # Game over once bird collides with a pipe or if bird goes above the scrren
+        # Game over once bird collides with a pipe or if bird goes above the screen
         if (
             sprite.groupcollide(
                 groupa=bird_group, groupb=pipe_group, dokilla=False, dokillb=False
             )
             or bird.rect.top < 0
         ):
-            collided += 1
             game_over = True
-            if collided == 1:
+            if not hit_pipe_sound:
                 logger.warning(
                     "Collision detected: Bird hit a pipe or flew out of bounds."
                 )
                 thump.play()
+                hit_pipe_sound = True
 
         # Check if bird fell to ground
-        if bird.rect.bottom >= 768:
-            fell += 1
+        if bird.rect.bottom >= GROUND_Y_POS:
             game_over = True
             flying = False
-            if fell == 1:
-                logger.warning("Bird hit the ground.")
+            if not hit_ground_sound:
+                logger.warning(
+                    "Collision detected: Bird hit a pipe or flew out of bounds."
+                )
                 thump.play()
+                hit_ground_sound = True
 
         # Display game over menu
         if game_over:
             restart_btn.draw()
             restart_menu_exit_btn.draw()
+            pygame.display.update()
             if restart_btn.check_if_button_is_pressed():
                 logger.info("Restart button pressed. Game is reset...")
                 game_over = False
-                fell = 0
-                collided = 0
+                hit_pipe_sound = False
+                hit_ground_sound = False
                 score = reset_game()
-            if restart_menu_exit_btn.check_if_button_is_pressed():
-                logger.info("Exit button pressed. Game is closing...")
-                save_high_score(high_score)
-                running = False
-
-    # Check for events
-    for event in events.get():
-        if event.type == pygame.QUIT or (
-            event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
-        ):
-            logger.info("Game window closed.")
-            running = False
-
-        if (
-            event.type == pygame.MOUSEBUTTONDOWN
-            and event.button == 1
-            and not flying
-            and not game_over
-        ):
-            flying = True
-
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            logger.info("Game paused.")
-            game_paused = True
-
+            exit_game()
+    check_events()
     pygame.display.update()
