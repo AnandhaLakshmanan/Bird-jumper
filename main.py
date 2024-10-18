@@ -1,8 +1,10 @@
-import pygame
-from pygame import display, font, image, mixer, mouse, sprite, time, transform, event as events
-from random import SystemRandom
 import logging
+from random import SystemRandom
 
+import pygame
+from pygame import display
+from pygame import event as events
+from pygame import font, image, mixer, mouse, sprite, time, transform
 
 pygame.init()
 
@@ -57,7 +59,7 @@ thump = mixer.Sound("Resources/thump.mp3")
 def load_high_score():
     """
     Loads the highest score from a text file named 'high_score.txt'.
-        
+
     :return: high score(int) or 0 if the file does not exist.
     """
     try:
@@ -79,7 +81,9 @@ def render_score_and_high_score(current_score, current_high_score):
     """
     high_score_style = font.Font(size=40)
     score_style = font.SysFont(name="Bauhaus 93", size=60)
-    high_score_txt = high_score_style.render(f"High Score: {current_high_score}", True, (255, 255, 255))
+    high_score_txt = high_score_style.render(
+        f"High Score: {current_high_score}", True, (255, 255, 255)
+    )
     score_txt = score_style.render(f"{current_score}", True, (255, 255, 255))
     high_score_txt_x = SCREEN_WIDTH - high_score_txt.get_width() - 20
     screen.blit(high_score_txt, (high_score_txt_x, 40))
@@ -99,9 +103,10 @@ def save_high_score(current_high_score):
 
 def reset_game():
     """
-    Resets the game state to its initial conditions for a fresh start. This function clears the pipes from the screen,
-    repositions the bird to its starting point, and resets the score to 0.
-    
+    Resets the game state to its initial conditions for a fresh start.
+    This function clears the pipes from the screen, repositions the bird to its starting point,
+    and resets the score to 0.
+
     :return: 0 (score(int)).
     """
     pipe_group.empty()
@@ -124,7 +129,9 @@ def get_logger():
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(filename="game.log", mode="w")
-    formatter = logging.Formatter("{asctime}: {name}: {levelname}: {message}", style="{", datefmt="%Y-%m-%d %H:%M")
+    formatter = logging.Formatter(
+        "{asctime}: {name}: {levelname}: {message}", style="{", datefmt="%Y-%m-%d %H:%M"
+    )
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     log.addHandler(file_handler)
@@ -135,7 +142,7 @@ class Element:
     def __init__(self, x_coord, y_coord, img_surface, scale_factor):
         """
         Initializes an Element object with position, image, and scaling.
-        
+
         :param x_coord: X-coordinate for the top-left corner of the element.
         :param y_coord: Y-coordinate for the top-left corner of the element.
         :param img_surface: The image surface to display for the element.
@@ -143,7 +150,10 @@ class Element:
         """
         width = img_surface.get_width()
         height = img_surface.get_height()
-        self.image = transform.scale(surface=img_surface, size=(int(width * scale_factor), int(height * scale_factor)))
+        self.image = transform.scale(
+            surface=img_surface,
+            size=(int(width * scale_factor), int(height * scale_factor)),
+        )
         self.rect = self.image.get_rect()
         self.rect.topleft = (x_coord, y_coord)
 
@@ -187,7 +197,7 @@ class Bird(pygame.sprite.Sprite):
     def __init__(self, x_coord, y_coord):
         """
         Initializes a Bird object with images for animation and sets the initial position.
-        
+
         :param x_coord: X-coordinate for the bird's center.
         :param y_coord: Y-coordinate for the bird's center.
         """
@@ -235,7 +245,9 @@ class Bird(pygame.sprite.Sprite):
                     self.index = 0
 
             # Rotate the bird
-            self.image = transform.rotate(surface=self.images[self.index], angle=self.vel * -2)
+            self.image = transform.rotate(
+                surface=self.images[self.index], angle=self.vel * -2
+            )
 
         else:
             # Make the bird face down when it falls to ground / collides with pipe
@@ -243,12 +255,12 @@ class Bird(pygame.sprite.Sprite):
 
 
 class Pipe(pygame.sprite.Sprite):
-    def __init__(self, x, y, position):
+    def __init__(self, x_coord, y_coord, position):
         """
         Initializes a Pipe object with its position and whether it's a top or bottom pipe.
-        
-        :param x: X-coordinate for the pipe's center.
-        :param y: Y-coordinate for the pipe's center.
+
+        :param x_coord: X-coordinate for the pipe's center.
+        :param y_coord: Y-coordinate for the pipe's center.
         :param position: 1 for top pipe, -1 for bottom pipe.
         """
         pygame.sprite.Sprite.__init__(self)
@@ -257,9 +269,9 @@ class Pipe(pygame.sprite.Sprite):
         pipe_gap_half = PIPE_GAP // 2
         if position == 1:
             self.image = transform.flip(surface=self.image, flip_x=False, flip_y=True)
-            self.rect.bottomleft = (x, y - pipe_gap_half)
+            self.rect.bottomleft = (x_coord, y_coord - pipe_gap_half)
         if position == -1:
-            self.rect.topleft = (x, y + pipe_gap_half)
+            self.rect.topleft = (x_coord, y_coord + pipe_gap_half)
 
     def update(self):
         """
@@ -280,11 +292,15 @@ bird_group.add(bird)
 # Create UI buttons
 title = Element(HALF_SCREEN_WIDTH - 270, 30, title_img, 2)
 restart_btn = Button(HALF_SCREEN_WIDTH - 80, HALF_SCREEN_HEIGHT - 100, restart_img, 1.5)
-restart_menu_exit_btn = Button(HALF_SCREEN_WIDTH - 50, HALF_SCREEN_HEIGHT, exit_img, 0.5)
+restart_menu_exit_btn = Button(
+    HALF_SCREEN_WIDTH - 50, HALF_SCREEN_HEIGHT, exit_img, 0.5
+)
 start_btn = Button(HALF_SCREEN_WIDTH - 130, HALF_SCREEN_HEIGHT - 130, start_img, 0.8)
 exit_btn = Button(HALF_SCREEN_WIDTH - 110, HALF_SCREEN_HEIGHT + 50, exit_img, 0.8)
 resume_btn = Button(HALF_SCREEN_WIDTH - 105, HALF_SCREEN_HEIGHT - 150, resume_img, 0.8)
-pause_menu_exit_btn = Button(HALF_SCREEN_WIDTH - 100, HALF_SCREEN_HEIGHT + 50, exit_img, 0.8)
+pause_menu_exit_btn = Button(
+    HALF_SCREEN_WIDTH - 100, HALF_SCREEN_HEIGHT + 50, exit_img, 0.8
+)
 
 logger = get_logger()
 logger.info("Game: Flappy Bird initialized.")
@@ -302,7 +318,7 @@ while running:
             start_game = True
             flying = True
         if exit_btn.check_if_button_is_pressed():
-            logger.info("Exit button pressed. Game started.")
+            logger.info("Exit button pressed. Game is closing...")
             save_high_score(high_score)
             running = False
 
@@ -380,13 +396,17 @@ while running:
 
         # Game over once bird collides with a pipe or if bird goes above the scrren
         if (
-            sprite.groupcollide(groupa=bird_group, groupb=pipe_group, dokilla=False, dokillb=False)
+            sprite.groupcollide(
+                groupa=bird_group, groupb=pipe_group, dokilla=False, dokillb=False
+            )
             or bird.rect.top < 0
         ):
             collided += 1
             game_over = True
             if collided == 1:
-                logger.warning("Collision detected: Bird hit a pipe or flew out of bounds.")
+                logger.warning(
+                    "Collision detected: Bird hit a pipe or flew out of bounds."
+                )
                 thump.play()
 
         # Check if bird fell to ground
@@ -415,11 +435,18 @@ while running:
 
     # Check for events
     for event in events.get():
-        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+        if event.type == pygame.QUIT or (
+            event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+        ):
             logger.info("Game window closed.")
             running = False
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not flying and not game_over:
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and not flying
+            and not game_over
+        ):
             flying = True
 
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
