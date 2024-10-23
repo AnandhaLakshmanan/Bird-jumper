@@ -3,7 +3,7 @@ from random import SystemRandom
 import pygame
 from pygame import mixer, sprite
 
-from game_sprites import Bird, Pipe
+from game_utils.game_sprites import Bird, Pipe
 from states.pause_menu import PauseMenu
 from states.state import State
 
