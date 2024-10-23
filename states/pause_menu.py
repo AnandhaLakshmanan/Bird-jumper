@@ -1,5 +1,5 @@
+from game_utils.ui_elements import Button
 from states.state import State
-from ui_elements import Button
 
 
 class PauseMenu(State):

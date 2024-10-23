@@ -4,7 +4,7 @@ import time
 import pygame
 from pygame import display, image
 
-from logger import Logger
+from game_utils.logger import Logger
 from states.title_screen import Title
 
 

@@ -1,6 +1,6 @@
+from game_utils.ui_elements import Button
 from states.game_world import GameWorld
 from states.state import State
-from ui_elements import Button
 
 
 class GameOverMenu(State):
