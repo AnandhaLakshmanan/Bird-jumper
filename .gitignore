@@ -4,5 +4,6 @@ __pycache__
 env
 myenv
 notes.txt
+todo.txt
 .idea/
 game.log

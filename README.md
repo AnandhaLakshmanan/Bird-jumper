@@ -19,7 +19,7 @@ Install dependencies
 Start the game
 
 ```bash
-  python main.py
+  python game.py
 ```
 
 ## Controls
