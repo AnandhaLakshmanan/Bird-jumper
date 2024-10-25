@@ -10,9 +10,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-      # - name: Install dependencies
-        # run: python -m pip install --upgrade pip flake8 isort black
-      - name: flake8 Lint
-        uses: py-actions/flake8@v2
-        with:
-          args: "--append-config=.flake8"
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip flake8 isort black
+      - name: flake8 check
+        run: flake8
