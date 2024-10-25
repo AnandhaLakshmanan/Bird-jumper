@@ -13,4 +13,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --upgrade pip flake8 isort black
       - name: flake8 check
-        run: flake8
+        run: flake8 .
+      - name: isort check
+        run: isort -c .
+        
