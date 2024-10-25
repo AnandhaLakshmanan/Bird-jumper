@@ -34,7 +34,6 @@ class Game:
             (self.SCREEN_WIDTH, self.SCREEN_HEIGHT), pygame.DOUBLEBUF | pygame.SRCALPHA
         )
         display.set_caption(title="Flappy Bird")
-        self.title_image = None
         self.ground_scroll = 0
         self.font = pygame.font.SysFont(name="Futura", size=40)
         self.high_score = self.load_high_score()
@@ -47,7 +46,7 @@ class Game:
                 os.path.join(self.ASSETS_DIR, "ground.png")
             ).convert_alpha()
             self.title_image = image.load(
-                os.path.join(self.ASSETS_DIR, "title.png")
+                os.path.join(self.ASSETS_DIR, "Title.png")
             ).convert_alpha()
             self.start_button_image = image.load(
                 os.path.join(self.ASSETS_DIR, "start.png")
