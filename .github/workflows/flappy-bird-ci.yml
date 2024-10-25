@@ -1,4 +1,4 @@
-name: Style Check
+name: Lint
 on: [push]
 jobs:
   build:
