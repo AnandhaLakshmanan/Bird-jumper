@@ -16,4 +16,6 @@ jobs:
         run: flake8 .
       - name: isort check
         run: isort -c .
+      - name: black check
+        run: black .
         
