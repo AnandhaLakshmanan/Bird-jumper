@@ -22,7 +22,7 @@ class Game:
     def __init__(self, logger):
         """
         Initializes the Game instance with the necessary properties, loads assets & high score,
-        sets initial state to title screen.
+        sets initial state to title screen
         """
         self.logger = logger
         self.logger.info("Game initialized...")
