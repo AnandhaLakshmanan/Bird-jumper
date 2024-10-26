@@ -29,14 +29,17 @@ Go to game directory and Start the game
 
 ## Gameplay
 Screenshots:
-![start_menu](https://github.com/user-attachments/assets/83c4af54-fe9a-49f8-81f6-b49c04f74ee7)
-![game_play](https://github.com/user-attachments/assets/09da32ec-bdc2-4e63-8d9f-4f9c513d30b9)
-![pause_menu](https://github.com/user-attachments/assets/3d7c7876-60a2-4b84-8aa9-c0bb206608f1)
-![game_over_menu](https://github.com/user-attachments/assets/8367248a-79e1-4003-aa0e-8c61bca54e40)
+
+![start_menu](https://github.com/user-attachments/assets/67d20c0a-89fc-4df3-aeec-f935a6cb3a17)
+![game_play](https://github.com/user-attachments/assets/e82c1a1c-964d-49bd-b366-14938187107f)
+![pause_menu](https://github.com/user-attachments/assets/46ce3c79-341e-4ac8-85bb-09f8712d9322)
+![game_over_menu](https://github.com/user-attachments/assets/489b96c7-f8b0-436c-85a4-e2b66984ab54)
+
 
 GIF:
 
 ![with_start_menu](https://github.com/user-attachments/assets/79fb11b5-43d8-466b-ab5f-b780eac30a4e)
+
 
 Video:
 https://github.com/user-attachments/assets/b4726c20-e0ca-4667-83a3-8e0db7b7ef03
